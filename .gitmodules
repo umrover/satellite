@@ -1,0 +1,3 @@
+[submodule "libs/equation"]
+	path = libs/equation
+	url = git@github.com:tyzoid/equation.git
