@@ -1,0 +1,93 @@
+#!/bin/bash
+
+download_file() {
+	wget="$(which wget)";
+	curl="$(which curl)";
+
+	if [ ! -z "$wget" ]; then
+		$wget "$1";
+	elif [ ! -z "$curl" ]; then
+		$curl "$1" -o "$(basename "$1")";
+	else
+		echo "Curl or wget must be installed to continue..." >&2;
+		exit 1;
+	fi
+
+	if [ ! -f "$(basename "$1")" ]; then
+		echo "Download failed" >&2;
+		exit 1;
+	fi
+
+	if [ ! -z "$2" ]; then
+		sha256sum="$(which sha256sum)";
+		if [ -z "$sha256sum" -a ! -z "$(which shasum)"]; then
+			sha256sum="$(which shasum) -a 256";
+		fi
+
+		if [ -z "$sha256sum" ]; then
+			echo "No sha256sum found. Skipping hash verification." >&2;
+		else
+			fhash="$($sha256sum "$(basename "$1")")";
+			if [ "$fhash" == "$2" ]; then
+				echo "Hash verification successful";
+			else
+				echo "Hash verification failed. Expected '$2', got '$fhash'." >&2;
+				exit 1;
+			fi
+		fi
+	fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	echo "You need to source this script:";
+	echo "source $0";
+	exit 1;
+fi
+
+if [ -z "$(grep -o 'libs/equation' <<< "$LD_LIBRARY_PATH")" ]; then
+	if [ ! -z "$LD_LIBRARY_PATH" ]; then
+		export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:";
+	fi
+
+	export LD_LIBRARY_PATH="$LD_LIBRARY_PATH""libs/equation"
+
+	# Check whether libtiff is installed
+	if [ ! -z "$(cpp <<< "#include<tiffio.h>" 2>&1 | grep -oe 'tiffio.h: No such file or directory' -oe "'tiffio.h' file not found")" ]; then
+		if [ ! -d "libs/libtiff" ]; then
+			cd libs
+			# Create directory for libtiff
+			mkdir libtiff-build
+
+			cd libtiff-build
+
+			# Grab libtiff
+			download_file 'http://dl.maptools.org/dl/libtiff/tiff-3.8.2.tar.gz' 'be88f037080b93ce0a337b2b3ca5e8195f76885deb6c558cc3aa872ee848fc76'
+			tar -vzxf tiff-3.8.2.tar.gz
+			rm tiff-3.8.2.tar.gz
+			cd tiff-3.8.2
+
+			# Build libtiff
+			./configure
+			make
+
+			# Move files
+			mv libtiff ../../
+
+			# Remove build files
+			cd ../../
+			rm -rv libtiff-build
+
+			cd ..
+		fi
+
+		export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:libs/libtiff/.libs"
+	fi
+
+	if [ -z "$DYLD_LIBRARY_PATH" ]; then
+		export DYLD_LIBRARY_PATH="$LD_LIBRARY_PATH";
+	else
+		export DYLD_LIBRARY_PATH="$DYLD_LIBRARY_PATH:$LD_LIBRARY_PATH";
+	fi
+
+	echo "Environment configured."
+fi

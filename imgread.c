@@ -1,4 +1,4 @@
-#include "libs/equation/equations.h"
+#include <equations.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -120,9 +120,9 @@ int main(int argc, char **argv) {
 				printf("    -h              Displays this help menu\n\n");
 
 				printf("Examples:\n");
-				printf("    %s -e 'mul(%%1,2)' -i image.tiff -o result.tiff\n", argv[0]);
+				printf("    %s -e 'mul(%%1,2)' -i image.tiff -o result.ppm\n", argv[0]);
 				printf("        + This will multiply the data in image.tiff by two, and\n");
-				printf("              write the resulting image to result.tiff.\n");
+				printf("              write the resulting image to result.ppm.\n");
 
 				return 0;
 				break;
