@@ -1,5 +1,6 @@
 CC=gcc
-CFLAGS=--std=c11 -Wall -Werror -Wextra -g3 -Ilibs/equation -Ilibs/libtiff -Llibs/equation -Llibs/libtiff/.libs -Wno-error=unused-command-line-argument
+CFLAGS=--std=c11 -Wall -Werror -Wextra -g3 -Ilibs/equation -Ilibs/libtiff -Llibs/equation -Llibs/libtiff/.libs
+#-Wno-error=unused-command-line-argument
 
 all: build
 

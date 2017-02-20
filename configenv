@@ -10,29 +10,29 @@ download_file() {
 		$curl "$1" -o "$(basename "$1")";
 	else
 		echo "Curl or wget must be installed to continue..." >&2;
-		exit 1;
+		return 1;
 	fi
 
 	if [ ! -f "$(basename "$1")" ]; then
 		echo "Download failed" >&2;
-		exit 1;
+		return 1;
 	fi
 
 	if [ ! -z "$2" ]; then
 		sha256sum="$(which sha256sum)";
-		if [ -z "$sha256sum" -a ! -z "$(which shasum)"]; then
+		if [ -z "$sha256sum" -a ! -z "$(which shasum)" ]; then
 			sha256sum="$(which shasum) -a 256";
 		fi
 
 		if [ -z "$sha256sum" ]; then
 			echo "No sha256sum found. Skipping hash verification." >&2;
 		else
-			fhash="$($sha256sum "$(basename "$1")")";
+			fhash="$($sha256sum "$(basename "$1")" | cut -f1 -d' ')";
 			if [ "$fhash" == "$2" ]; then
 				echo "Hash verification successful";
 			else
 				echo "Hash verification failed. Expected '$2', got '$fhash'." >&2;
-				exit 1;
+				return 1;
 			fi
 		fi
 	fi
@@ -41,8 +41,10 @@ download_file() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 	echo "You need to source this script:";
 	echo "source $0";
-	exit 1;
+	return 1;
 fi
+
+path="$(pwd)";
 
 if [ -z "$(grep -o 'libs/equation' <<< "$LD_LIBRARY_PATH")" ]; then
 	if [ ! -z "$LD_LIBRARY_PATH" ]; then
@@ -61,7 +63,11 @@ if [ -z "$(grep -o 'libs/equation' <<< "$LD_LIBRARY_PATH")" ]; then
 			cd libtiff-build
 
 			# Grab libtiff
-			download_file 'http://dl.maptools.org/dl/libtiff/tiff-3.8.2.tar.gz' 'be88f037080b93ce0a337b2b3ca5e8195f76885deb6c558cc3aa872ee848fc76'
+			if ! download_file 'http://dl.maptools.org/dl/libtiff/tiff-3.8.2.tar.gz' 'be88f037080b93ce0a337b2b3ca5e8195f76885deb6c558cc3aa872ee848fc76'; then
+				cd "$path"
+				return 1
+			fi
+
 			tar -vzxf tiff-3.8.2.tar.gz
 			rm tiff-3.8.2.tar.gz
 			cd tiff-3.8.2
@@ -91,3 +97,24 @@ if [ -z "$(grep -o 'libs/equation' <<< "$LD_LIBRARY_PATH")" ]; then
 
 	echo "Environment configured."
 fi
+
+cd "$path"
+
+cat << "EOF" > Makefile
+CC=gcc
+CFLAGS=--std=c11 -O3 -Ilibs/equation -Ilibs/libtiff -Llibs/equation -Llibs/libtiff/.libs
+
+all: build
+
+build: libbuild imgread.o
+	$(CC) $(CFLAGS) imgread.o -ltiff -lequation -o imgread
+
+libbuild:
+	make -C libs/equation library
+
+clean:
+	make -C libs/equation clean
+	rm -vf *.o
+	rm -vf *.so
+	rm -vf imgread
+EOF

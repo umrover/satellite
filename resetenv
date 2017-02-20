@@ -1,0 +1,34 @@
+#!/bin/bash
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	echo "You need to source this script:";
+	echo "source $0";
+	return 1;
+fi
+
+# Remove entries from library paths
+export LD_LIBRARY_PATH="$(echo "$LD_LIBRARY_PATH" | sed 's+libs/libtiff/.libs++g;s+libs/equation++g;s+::+:+g;s+:$++g')";
+export DYLD_LIBRARY_PATH="$(echo "$DYLD_LIBRARY_PATH" | sed 's+libs/libtiff/.libs++g;s+libs/equation++g;s+::+:+g;s+:$++g')";
+
+# Remove built directories
+rm -rvf libs/libtiff
+
+cat << "EOF" > Makefile
+CC=gcc
+CFLAGS=--std=c11 -Wall -Werror -Wextra -g3 -Ilibs/equation -Ilibs/libtiff -Llibs/equation -Llibs/libtiff/.libs
+#-Wno-error=unused-command-line-argument
+
+all: build
+
+build: libbuild imgread.o
+	$(CC) $(CFLAGS) imgread.o -ltiff -lequation -o imgread
+
+libbuild:
+	make -C libs/equation library
+
+clean:
+	make -C libs/equation clean
+	rm -vf *.o
+	rm -vf *.so
+	rm -vf imgread
+EOF
