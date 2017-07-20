@@ -247,6 +247,7 @@ int main(int argc, char **argv) {
 			}
 
 			printf("| %3.1f%%", ((float) row * 100)/images[0].height);
+			fflush(stdout);
 		}
 
 		for (size_t img = 0; img < image_count; img++)
